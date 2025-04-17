@@ -98,7 +98,7 @@ export default function Header() {
         flexWrap: "wrap",
         gap: "1rem"
       }}>
-        <Link href="/" style={{ textDecoration: "none" }}>
+        <Link href="/" style={{ textDecoration: "none" }} onClick={() => setOpen(false)}>
           <div style={{ 
             cursor: "pointer",
             display: "flex",
@@ -159,9 +159,9 @@ export default function Header() {
           width: isMobile ? "100%" : "auto",
           animation: isMobile && open ? "fadeIn 0.3s ease-in-out" : "none"
         }}>
-          <Link href="/"><span style={linkStyle}>Accueil</span></Link>
-          <Link href="/nous-rejoindre"><span style={linkStyle}>Nous rejoindre</span></Link>
-          <Link href="#contact"><span style={linkStyle}>Contact</span></Link>
+          <Link href="/" onClick={() => setOpen(false)}><span style={linkStyle} >Accueil</span></Link>
+          <Link href="/nous-rejoindre" onClick={() => setOpen(false)}><span style={linkStyle}>Nous rejoindre</span></Link>
+          <Link href="#contact" onClick={() => setOpen(false)}><span style={linkStyle}>Contact</span></Link>
         </nav>
       </div>
 
