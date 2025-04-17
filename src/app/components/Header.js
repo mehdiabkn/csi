@@ -6,8 +6,18 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [scrollLock, setScrollLock] = useState(false); // Verrou anti-tremblement
+  const [isMobile, setIsMobile] = useState(false); // État pour détecter le mobile
 
   useEffect(() => {
+    // Détection de mobile au chargement
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    // Exécuter immédiatement et ajouter l'écouteur
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    
     // Gestion du défilement smooth
     const handleScrollTo = (e) => {
       const link = e.target.closest('a');
@@ -66,6 +76,7 @@ export default function Header() {
         link.removeEventListener("click", handleScrollTo);
       });
       window.removeEventListener("scroll", scrollListener);
+      window.removeEventListener('resize', checkIfMobile);
     };
   }, [scrolled, scrollLock]);
 
@@ -121,14 +132,33 @@ export default function Header() {
           </div>
         </Link>
 
-        <button
-          onClick={() => setOpen(!open)}
-          className="menu-toggle"
-        >
-          {open ? "✕" : "☰"}
-        </button>
+        {/* Afficher le bouton hamburger uniquement si l'état mobile est détecté */}
+        {isMobile && (
+          <button
+            onClick={() => setOpen(!open)}
+            className="menu-toggle"
+            style={{
+              background: "none",
+              border: "none",
+              fontSize: "1.8rem",
+              cursor: "pointer",
+              color: "#1a1a1a",
+              display: "block" // Toujours afficher quand isMobile est true
+            }}
+          >
+            {open ? "✕" : "☰"}
+          </button>
+        )}
 
-        <nav className={`nav-links ${open ? "open" : ""}`} style={{ marginLeft: "auto" }}>
+        <nav className={`nav-links ${open ? "open" : ""}`} style={{ 
+          marginLeft: "auto",
+          display: isMobile ? (open ? "flex" : "none") : "flex",
+          flexDirection: isMobile ? "column" : "row",
+          alignItems: "center",
+          marginTop: isMobile ? "1rem" : "0",
+          width: isMobile ? "100%" : "auto",
+          animation: isMobile && open ? "fadeIn 0.3s ease-in-out" : "none"
+        }}>
           <Link href="/"><span style={linkStyle}>Accueil</span></Link>
           <Link href="/nous-rejoindre"><span style={linkStyle}>Nous rejoindre</span></Link>
           <Link href="#contact"><span style={linkStyle}>Contact</span></Link>
@@ -139,44 +169,15 @@ export default function Header() {
         .nav-links {
           display: flex;
           gap: 2rem;
-          align-items: center;
         }
 
         .nav-links span:hover {
           background-color: #f1f1f1;
         }
 
-        .menu-toggle {
-          background: none;
-          border: none;
-          font-size: 1.8rem;
-          cursor: pointer;
-          color: #1a1a1a;
-          display: none;
-        }
-
-        @media (max-width: 768px) {
-          .menu-toggle {
-            display: block;
-          }
-
-          .nav-links {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 1rem;
-            width: 100%;
-            animation: fadeIn 0.3s ease-in-out;
-          }
-
-          .nav-links.open {
-            display: flex;
-          }
-
-          @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </header>
