@@ -366,21 +366,7 @@ export default function JoinUsPage() {
                   </p>
                 </div>
                 
-                <div style={{
-                  flex: "0 0 85%",
-                  scrollSnapAlign: "start",
-                  backgroundColor: "#f8f9fa",
-                  padding: "1.2rem",
-                  borderRadius: "10px",
-                  minWidth: "250px"
-                }}>
-                  <h3 style={{ color: "#2c5364", marginBottom: "0.75rem", fontSize: "1.1rem" }}>
-                    Équilibre vie pro/perso
-                  </h3>
-                  <p style={{ color: "#666", fontSize: "0.95rem" }}>
-                    on te met pas la pression
-                  </p>
-                </div>
+              
                 
                 <div style={{
                   flex: "0 0 85%",
