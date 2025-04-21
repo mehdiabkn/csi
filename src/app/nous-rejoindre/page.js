@@ -1,17 +1,29 @@
 "use client";
 import Header from "./components/Header";
 import Footer from "../components/Footer";
-import { useState, useEffect } from "react";
-import { Upload, ArrowRight, CheckCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Upload, ArrowRight, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function JoinUsPage() {
   const [activeTab, setActiveTab] = useState("consultant");
   const [formStatus, setFormStatus] = useState({
     submitted: false,
+    success: false,
     message: ""
   });
   const [fileName, setFileName] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    position: "",
+    message: ""
+  });
+  const fileInputRef = useRef(null);
+  const formRef = useRef(null);
 
   useEffect(() => {
     // Détection de la taille d'écran
@@ -29,28 +41,171 @@ export default function JoinUsPage() {
     };
   }, []);
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Valeur qui sera stockée après validation
+    let processedValue = value;
+    
+    // Traitement spécifique selon le champ
+    if (name === "phone") {
+      // Garder uniquement les chiffres
+      let digits = value.replace(/\D/g, '');
+      
+      // S'assurer que le numéro commence par 0
+      if (digits.length > 0 && digits[0] !== '0') {
+        digits = '0' + digits;
+      }
+      
+      // Limiter à 10 chiffres
+      digits = digits.slice(0, 10);
+      
+      // Format XX XX XX XX XX
+      if (digits.length > 0) {
+        processedValue = digits.match(/.{1,2}/g).join(' ');
+      } else {
+        processedValue = digits;
+      }
+    } 
+    else if (name === "firstName" || name === "lastName") {
+      // Ne garder que les lettres, espaces et tirets
+      processedValue = value.replace(/[^a-zA-ZÀ-ÿ\s-]/g, '');
+      
+      // Remplacer les tirets multiples par un seul
+      processedValue = processedValue.replace(/-+/g, '-');
+      
+      // Limiter à 20 caractères
+      processedValue = processedValue.slice(0, 20);
+    }
+    
+    // Mettre à jour l'état
+    setFormData({
+      ...formData,
+      [name]: processedValue
+    });
+  };
   const handleFileChange = (e) => {
     if (e.target.files[0]) {
-      setFileName(e.target.files[0].name);
+      const file = e.target.files[0];
+      
+      // Vérification de la taille (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setFormStatus({
+          submitted: true,
+          success: false,
+          message: "Le fichier est trop volumineux. Veuillez choisir un fichier de moins de 5MB."
+        });
+        e.target.value = null;
+        return;
+      }
+      
+      // Vérification du type de fichier
+      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!validTypes.includes(file.type)) {
+        setFormStatus({
+          submitted: true,
+          success: false,
+          message: "Format de fichier non supporté. Veuillez utiliser PDF ou Word."
+        });
+        e.target.value = null;
+        return;
+      }
+      
+      setFileName(file.name);
+      setFormStatus({
+        submitted: false,
+        success: false,
+        message: ""
+      });
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simuler l'envoi du formulaire
-    setFormStatus({
-      submitted: true,
-      message: "Votre candidature a bien été envoyée. Nous reviendrons vers vous rapidement."
-    });
-    // Réinitialiser après 5 secondes
-    setTimeout(() => {
+    
+    // Vérifier si un fichier est sélectionné
+    if (!fileInputRef.current.files[0]) {
       setFormStatus({
-        submitted: false,
+        submitted: true,
+        success: false,
+        message: "Veuillez joindre votre CV."
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Création d'un objet FormData pour envoyer les données et le fichier
+      const formDataToSend = new FormData();
+      
+      // Ajout des champs de texte
+      Object.keys(formData).forEach(key => {
+        formDataToSend.append(key, formData[key]);
+      });
+      
+      // Ajout du fichier CV
+      formDataToSend.append('cv', fileInputRef.current.files[0]);
+      
+      // Ajout de champs de sécurité
+      formDataToSend.append('timestamp', Date.now());
+      formDataToSend.append('nonce', Math.random().toString(36).substring(2, 15));
+      
+      // Envoi des données au backend
+      const response = await fetch("https://backnewsloc2.onrender.com/consultant-si/apply", {
+        method: "POST",
+        headers: {
+          "X-Client-ID": "consultant-si-frontend"
+        },
+        body: formDataToSend
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || "Une erreur s'est produite lors de l'envoi de votre candidature.");
+      }
+      
+      // Succès
+      setFormStatus({
+        submitted: true,
+        success: true,
+        message: "Votre candidature a bien été envoyée. Nous reviendrons vers vous rapidement."
+      });
+      
+      // Réinitialiser le formulaire
+      formRef.current.reset();
+      setFileName("");
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        position: "",
         message: ""
       });
-      e.target.reset();
-      setFileName("");
-    }, 5000);
+      
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du formulaire:", error);
+      setFormStatus({
+        submitted: true,
+        success: false,
+        message: error.message || "Une erreur est survenue lors de l'envoi. Veuillez réessayer."
+      });
+    } finally {
+      setIsSubmitting(false);
+      
+      // Si succès, effacer le message après 5 secondes
+      if (formStatus.success) {
+        setTimeout(() => {
+          setFormStatus({
+            submitted: false,
+            success: false,
+            message: ""
+          });
+        }, 5000);
+      }
+    }
   };
 
   const positions = {
@@ -88,6 +243,17 @@ export default function JoinUsPage() {
         requirements: "Maîtrise de Java/Spring, Python ou Node.js. Expérience en API, bases de données et microservices."
       }
     ]
+  };
+
+  // Style pour les champs de formulaire
+  const inputStyle = {
+    padding: isMobile ? "0.8rem 1rem" : "1rem 1.2rem", 
+    borderRadius: "8px", 
+    border: "1px solid #e0e0e0",
+    fontSize: isMobile ? "0.95rem" : "1rem",
+    transition: "border-color 0.3s ease",
+    outline: "none",
+    width: "100%"
   };
 
   return (
@@ -250,14 +416,7 @@ export default function JoinUsPage() {
                     Progressez rapidement grâce à nos programmes de formation continue et d'accompagnement personnalisé.
                   </p>
                 </div>
-                <div>
-                  <h3 style={{ color: "#2c5364", marginBottom: "0.75rem", fontSize: "1.25rem" }}>
-                    Équilibre vie pro/perso
-                  </h3>
-                  <p style={{ color: "#666" }}>
-                    on te met pas la pression
-                  </p>
-                </div>
+                
                 <div>
                   <h3 style={{ color: "#2c5364", marginBottom: "0.75rem", fontSize: "1.25rem" }}>
                     Innovation technique
@@ -439,8 +598,8 @@ export default function JoinUsPage() {
             ))}
           </div>
 
-          {/* Formulaire de candidature */}
-          <div id="application-form" style={{
+{/* Formulaire de candidature */}
+<div id="application-form" style={{
             backgroundColor: "white",
             padding: isMobile ? "1.5rem" : "3rem",
             borderRadius: "12px",
@@ -458,82 +617,64 @@ export default function JoinUsPage() {
               Envoyez-nous votre candidature
             </h3>
 
-            <form onSubmit={handleSubmit} style={{
+            <form ref={formRef} onSubmit={handleSubmit} style={{
               display: "flex",
               flexDirection: "column",
               gap: isMobile ? "1rem" : "1.2rem"
             }}>
-
               <input 
-                type="email" 
+                type="text" 
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
                 placeholder="Prénom" 
                 required 
-                style={{ 
-                  padding: isMobile ? "0.8rem 1rem" : "1rem 1.2rem", 
-                  borderRadius: "8px", 
-                  border: "1px solid #e0e0e0",
-                  fontSize: isMobile ? "0.95rem" : "1rem",
-                  transition: "border-color 0.3s ease",
-                  outline: "none"
-                }} 
+                style={inputStyle} 
                 onFocus={e => e.target.style.borderColor = "#2c5364"}
                 onBlur={e => e.target.style.borderColor = "#e0e0e0"}
               />
                <input 
-                type="email" 
+                type="text" 
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
                 placeholder="Nom" 
                 required 
-                style={{ 
-                  padding: isMobile ? "0.8rem 1rem" : "1rem 1.2rem", 
-                  borderRadius: "8px", 
-                  border: "1px solid #e0e0e0",
-                  fontSize: isMobile ? "0.95rem" : "1rem",
-                  transition: "border-color 0.3s ease",
-                  outline: "none"
-                }} 
+                style={inputStyle} 
                 onFocus={e => e.target.style.borderColor = "#2c5364"}
                 onBlur={e => e.target.style.borderColor = "#e0e0e0"}
               />
               <input 
                 type="email" 
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
                 placeholder="Email" 
                 required 
-                style={{ 
-                  padding: isMobile ? "0.8rem 1rem" : "1rem 1.2rem", 
-                  borderRadius: "8px", 
-                  border: "1px solid #e0e0e0",
-                  fontSize: isMobile ? "0.95rem" : "1rem",
-                  transition: "border-color 0.3s ease",
-                  outline: "none"
-                }} 
+                style={inputStyle} 
                 onFocus={e => e.target.style.borderColor = "#2c5364"}
                 onBlur={e => e.target.style.borderColor = "#e0e0e0"}
               />
               
               <input 
                 type="tel" 
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
                 placeholder="Téléphone" 
-                style={{ 
-                  padding: isMobile ? "0.8rem 1rem" : "1rem 1.2rem", 
-                  borderRadius: "8px", 
-                  border: "1px solid #e0e0e0",
-                  fontSize: isMobile ? "0.95rem" : "1rem",
-                  transition: "border-color 0.3s ease",
-                  outline: "none"
-                }}
+                style={inputStyle}
+                pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
                 onFocus={e => e.target.style.borderColor = "#2c5364"}
                 onBlur={e => e.target.style.borderColor = "#e0e0e0"}
               />
 
               <select 
+                name="position"
+                value={formData.position}
+                onChange={handleInputChange}
                 required
                 style={{ 
-                  padding: isMobile ? "0.8rem 1rem" : "1rem 1.2rem", 
-                  borderRadius: "8px", 
-                  border: "1px solid #e0e0e0",
-                  fontSize: isMobile ? "0.95rem" : "1rem",
-                  transition: "border-color 0.3s ease",
-                  outline: "none",
+                  ...inputStyle,
                   backgroundColor: "white",
                   appearance: "none",
                   backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"%232c5364\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"6 9 12 15 18 9\"></polyline></svg>')",
@@ -544,8 +685,9 @@ export default function JoinUsPage() {
                 onFocus={e => e.target.style.borderColor = "#2c5364"}
                 onBlur={e => e.target.style.borderColor = "#e0e0e0"}
               >
-                <option value="" disabled selected>Poste souhaité</option>
-                {positions.consultant.map((position, index) => (
+          <option value="" disabled>Poste souhaité</option>
+
+          {positions.consultant.map((position, index) => (
                   <option key={`consultant-${index}`} value={position.title}>
                     {position.title}
                   </option>
@@ -559,17 +701,15 @@ export default function JoinUsPage() {
               </select>
               
               <textarea 
+                name="message"
+                value={formData.message}
+                onChange={handleInputChange}
                 placeholder="Votre message (présentez-vous, vos motivations, expériences...)" 
                 rows={isMobile ? 4 : 5} 
                 style={{ 
-                  padding: isMobile ? "0.8rem 1rem" : "1rem 1.2rem", 
-                  borderRadius: "8px", 
-                  border: "1px solid #e0e0e0",
-                  fontSize: isMobile ? "0.95rem" : "1rem",
+                  ...inputStyle,
                   resize: "vertical",
-                  fontFamily: "inherit",
-                  transition: "border-color 0.3s ease",
-                  outline: "none"
+                  fontFamily: "inherit"
                 }}
                 onFocus={e => e.target.style.borderColor = "#2c5364"}
                 onBlur={e => e.target.style.borderColor = "#e0e0e0"}
@@ -616,6 +756,7 @@ export default function JoinUsPage() {
                 <input 
                   type="file" 
                   id="cv-upload" 
+                  ref={fileInputRef}
                   accept=".pdf,.doc,.docx" 
                   style={{ display: "none" }}
                   onChange={handleFileChange}
@@ -651,13 +792,14 @@ export default function JoinUsPage() {
               
               <button 
                 type="submit" 
+                disabled={isSubmitting}
                 style={{
-                  backgroundColor: "#2c5364",
+                  backgroundColor: isSubmitting ? "#90a4ae" : "#2c5364",
                   color: "white",
                   fontWeight: "600",
                   padding: isMobile ? "0.9rem" : "1rem",
                   borderRadius: "8px",
-                  cursor: "pointer",
+                  cursor: isSubmitting ? "not-allowed" : "pointer",
                   border: "none",
                   fontSize: isMobile ? "0.95rem" : "1rem",
                   display: "flex",
@@ -665,31 +807,46 @@ export default function JoinUsPage() {
                   justifyContent: "center",
                   gap: "0.5rem",
                   transition: "all 0.3s ease",
-                  marginTop: "0.5rem"
+                  marginTop: "0.5rem",
+                  opacity: isSubmitting ? 0.8 : 1
                 }}
-                onMouseOver={!isMobile ? e => {
+                onMouseOver={!isMobile && !isSubmitting ? e => {
                   e.currentTarget.style.backgroundColor = "#203a43";
                   e.currentTarget.style.transform = "translateY(-2px)";
                 } : undefined}
-                onMouseOut={!isMobile ? e => {
+                onMouseOut={!isMobile && !isSubmitting ? e => {
                   e.currentTarget.style.backgroundColor = "#2c5364";
                   e.currentTarget.style.transform = "translateY(0)";
                 } : undefined}
               >
-                {formStatus.submitted ? <CheckCircle size={isMobile ? 16 : 18} /> : "Envoyer ma candidature"}
+                {isSubmitting ? "Envoi en cours..." : formStatus.success ? (
+                  <>
+                    <CheckCircle size={isMobile ? 16 : 18} />
+                    Candidature envoyée
+                  </>
+                ) : (
+                  "Envoyer ma candidature"
+                )}
               </button>
               
               {formStatus.submitted && (
                 <div style={{
                   marginTop: "1rem",
-                  color: "#2e7d32",
-                  backgroundColor: "#e8f5e9",
+                  color: formStatus.success ? "#2e7d32" : "#d32f2f",
+                  backgroundColor: formStatus.success ? "#e8f5e9" : "#ffebee",
                   padding: isMobile ? "0.6rem" : "0.75rem",
                   borderRadius: "6px",
                   fontWeight: "500",
-                  textAlign: "center",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
                   fontSize: isMobile ? "0.9rem" : "1rem"
                 }}>
+                  {formStatus.success ? (
+                    <CheckCircle size={16} color="#2e7d32" />
+                  ) : (
+                    <AlertCircle size={16} color="#d32f2f" />
+                  )}
                   {formStatus.message}
                 </div>
               )}

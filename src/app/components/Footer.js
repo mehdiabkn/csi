@@ -62,7 +62,7 @@ export default function Footer() {
             marginBottom: "2rem"
           }}>
             {/* Icônes de réseaux sociaux - version simple pour ne pas dépendre d'une bibliothèque */}
-            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" style={{ 
+            <a href="https://www.linkedin.com/in/mohamed-aberkane-49334718/" target="_blank" rel="noopener noreferrer" style={{ 
               width: "32px", 
               height: "32px", 
               display: "flex", 

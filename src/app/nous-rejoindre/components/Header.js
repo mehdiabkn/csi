@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import Logo from "../../components/Logo";
 
 export default function Header() {
   const [open, setOpen] = useState(false);
@@ -99,37 +100,7 @@ export default function Header() {
         gap: "1rem"
       }}>
         <Link href="/" style={{ textDecoration: "none" }} onClick={() => setOpen(false)}>
-          <div style={{ 
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            fontFamily: "'Segoe UI', Arial, sans-serif",
-            fontWeight: "bold",
-            marginBottom: scrolled ? "0" : "1.5rem",
-            transition: "all 0.3s ease"
-          }}>
-            <span style={{ 
-              fontSize: scrolled ? "3rem" : "3.8rem", 
-              color: "#0f2027", 
-              letterSpacing: "-0.5px",
-              transition: "all 0.3s ease"
-            }}>c</span>
-            <span style={{ 
-              fontSize: scrolled ? "3rem" : "3.8rem", 
-              color: "#4a9cb5",
-              fontWeight: "800",
-              position: "relative",
-              letterSpacing: "-1px",
-              transition: "all 0.3s ease"
-            }}>S</span>
-            <span style={{ 
-              fontSize: scrolled ? "3rem" : "3.8rem", 
-              color: "#0f2027",
-              letterSpacing: "-0.5px",
-              marginRight: "5px",
-              transition: "all 0.3s ease"
-            }}>i</span>
-          </div>
+         <Logo/>
         </Link>
 
         {/* Afficher le bouton hamburger uniquement si l'état mobile est détecté */}

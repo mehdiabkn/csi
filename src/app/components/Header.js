@@ -1,12 +1,15 @@
 "use client";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import Logo from "./Logo";
 
 export default function Header() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [scrollLock, setScrollLock] = useState(false); // Verrou anti-tremblement
-  const [isMobile, setIsMobile] = useState(false); // État pour détecter le mobile
+  const [scrollLock, setScrollLock] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const headerRef = useRef(null);
+  const scrollTimeout = useRef(null);
 
   useEffect(() => {
     // Détection de mobile au chargement
@@ -25,31 +28,51 @@ export default function Header() {
         e.preventDefault();
         const target = document.querySelector(link.hash);
         if (target) {
+          // Appliquer un verrouillage pendant les défilements contrôlés
+          setScrollLock(true);
+          
           window.scrollTo({
             top: target.offsetTop,
             behavior: "smooth"
           });
-          setOpen(false);
+          
+          // Libérer le verrouillage après la fin probable de l'animation
+          setTimeout(() => {
+            setScrollLock(false);
+            setOpen(false);
+          }, 1000);
         }
       }
     };
 
-    // Détection du scroll pour changer l'apparence du header
+    // Détection du scroll avec anti-tremblement amélioré
     const handleScroll = () => {
       if (scrollLock) return; // Ne rien faire si verrouillé
       
       const offset = window.scrollY;
       
-      // Utilisation de seuils différents pour éviter l'oscillation
-      if (!scrolled && offset > 150) {
+      // Augmenter considérablement l'écart entre les seuils
+      if (!scrolled && offset > 200) {
+        // Verrouiller avant de changer l'état
+        setScrollLock(true);
+        
+        // Appliquer le changement
         setScrolled(true);
-        // Verrouiller temporairement pour éviter les rebonds
+        
+        // Libérer le verrouillage après un délai significatif (500ms)
+        clearTimeout(scrollTimeout.current);
+        scrollTimeout.current = setTimeout(() => setScrollLock(false), 500);
+        
+      } else if (scrolled && offset < 50) { // Seuil beaucoup plus bas
+        // Verrouiller avant de changer l'état
         setScrollLock(true);
-        setTimeout(() => setScrollLock(false), 200);
-      } else if (scrolled && offset < 100) { // Seuil inférieur plus bas
+        
+        // Appliquer le changement
         setScrolled(false);
-        setScrollLock(true);
-        setTimeout(() => setScrollLock(false), 200);
+        
+        // Libérer le verrouillage après un délai significatif (500ms)
+        clearTimeout(scrollTimeout.current);
+        scrollTimeout.current = setTimeout(() => setScrollLock(false), 500);
       }
     };
 
@@ -57,19 +80,19 @@ export default function Header() {
       link.addEventListener("click", handleScrollTo);
     });
 
-    // Écoute de défilement avec throttling pour de meilleures performances
-    let ticking = false;
+    // Écoute de défilement avec throttling amélioré
+    let lastScrollTime = 0;
+    const scrollThreshold = 100; // ms entre les événements de défilement
+
     const scrollListener = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          handleScroll();
-          ticking = false;
-        });
-        ticking = true;
+      const now = Date.now();
+      if (now - lastScrollTime > scrollThreshold) {
+        lastScrollTime = now;
+        handleScroll();
       }
     };
 
-    window.addEventListener("scroll", scrollListener);
+    window.addEventListener("scroll", scrollListener, { passive: true });
 
     return () => {
       document.querySelectorAll("a[href^='#']").forEach((link) => {
@@ -77,59 +100,36 @@ export default function Header() {
       });
       window.removeEventListener("scroll", scrollListener);
       window.removeEventListener('resize', checkIfMobile);
+      clearTimeout(scrollTimeout.current);
     };
   }, [scrolled, scrollLock]);
 
   return (
-    <header style={{
-      position: "sticky",
-      top: 0,
-      zIndex: 50,
-      backgroundColor: scrolled ? "rgba(255, 255, 255, 0.98)" : "#ffffff",
-      borderBottom: scrolled ? "1px solid rgba(234, 234, 234, 0.8)" : "1px solid #eaeaea",
-      padding: scrolled ? "0.6rem 2rem" : "1rem 2rem",
-      transition: "all 0.3s ease",
-      boxShadow: scrolled ? "0 2px 10px rgba(0, 0, 0, 0.08)" : "none"
-    }}>
+    <header 
+      ref={headerRef}
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+        backgroundColor: scrolled ? "rgba(255, 255, 255, 0.98)" : "#ffffff",
+        borderBottom: scrolled ? "1px solid rgba(234, 234, 234, 0.8)" : "1px solid #eaeaea",
+        transform: scrolled ? "translateY(0)" : "translateY(0)",
+        transition: "all 0.3s ease",
+        boxShadow: scrolled ? "0 2px 10px rgba(0, 0, 0, 0.08)" : "none",
+        height: scrolled ? "auto" : "auto",
+        willChange: "transform, box-shadow" // Optimisation pour les animations
+      }}
+    >
       <div style={{
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         flexWrap: "wrap",
-        gap: "1rem"
+        gap: "1rem",
+        padding: scrolled ? "0.6rem 2rem" : "1rem 2rem"
       }}>
         <Link href="/" style={{ textDecoration: "none" }} onClick={() => setOpen(false)}>
-          <div style={{ 
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            fontFamily: "'Segoe UI', Arial, sans-serif",
-            fontWeight: "bold",
-            marginBottom: scrolled ? "0" : "1.5rem",
-            transition: "all 0.3s ease"
-          }}>
-            <span style={{ 
-              fontSize: scrolled ? "3rem" : "3.8rem", 
-              color: "#0f2027", 
-              letterSpacing: "-0.5px",
-              transition: "all 0.3s ease"
-            }}>c</span>
-            <span style={{ 
-              fontSize: scrolled ? "3rem" : "3.8rem", 
-              color: "#4a9cb5",
-              fontWeight: "800",
-              position: "relative",
-              letterSpacing: "-1px",
-              transition: "all 0.3s ease"
-            }}>S</span>
-            <span style={{ 
-              fontSize: scrolled ? "3rem" : "3.8rem", 
-              color: "#0f2027",
-              letterSpacing: "-0.5px",
-              marginRight: "5px",
-              transition: "all 0.3s ease"
-            }}>i</span>
-          </div>
+          <Logo scrolled={scrolled} />
         </Link>
 
         {/* Afficher le bouton hamburger uniquement si l'état mobile est détecté */}
