@@ -216,20 +216,7 @@ export default function Footer() {
                 Politique de confidentialité
               </Link>
             </li>
-            <li>
-              <Link href="/cgv" style={{
-                color: "white",
-                opacity: 0.8,
-                textDecoration: "none",
-                transition: "opacity 0.3s ease",
-                display: "block"
-              }}
-              onMouseOver={e => e.currentTarget.style.opacity = 1}
-              onMouseOut={e => e.currentTarget.style.opacity = 0.8}
-              >
-                Conditions générales
-              </Link>
-            </li>
+
             <li>
               <Link href="/cookies" style={{
                 color: "white",
@@ -303,7 +290,7 @@ export default function Footer() {
               marginTop: "0.5rem",
               lineHeight: "1.6"
             }}>
-              123 Avenue des Consultants<br />
+              66 Avenue des Champs Elysées<br />
               75008 Paris, France
             </address>
           </div>
