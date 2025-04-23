@@ -649,7 +649,7 @@ export default function JoinUsPage() {
                 onChange={handleInputChange}
                 placeholder="Téléphone" 
                 style={inputStyle}
-                pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
+                pattern="^0[1-9]( ?[0-9]{2}){4}$"
                 onFocus={e => e.target.style.borderColor = "#2c5364"}
                 onBlur={e => e.target.style.borderColor = "#e0e0e0"}
               />
